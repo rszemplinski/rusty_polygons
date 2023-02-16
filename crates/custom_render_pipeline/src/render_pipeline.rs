@@ -1,7 +1,7 @@
 use bevy::{
-    pbr::{MeshPipeline, MeshPipelineKey},
+    pbr::{DrawMesh, MeshPipeline, MeshPipelineKey, SetMeshBindGroup, SetMeshViewBindGroup},
     prelude::{AssetServer, FromWorld, Handle, Resource, Shader},
-    render::render_resource::SpecializedMeshPipeline,
+    render::{render_phase::SetItemPipeline, render_resource::SpecializedMeshPipeline},
 };
 
 #[derive(Resource)]
@@ -36,3 +36,10 @@ impl SpecializedMeshPipeline for CustomRenderPipeline {
         todo!()
     }
 }
+
+pub type DrawCustom = (
+    SetItemPipeline,
+    SetMeshViewBindGroup<0>,
+    SetMeshBindGroup<1>,
+    DrawMesh,
+);
