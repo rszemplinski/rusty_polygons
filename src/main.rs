@@ -1,97 +1,65 @@
 use bevy::{
-    pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
-    reflect::TypeUuid,
-    render::{
-        mesh::{MeshVertexAttribute, MeshVertexBufferLayout},
-        render_resource::{
-            AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
-            VertexFormat,
-        },
-    },
+    render::{mesh, render_resource::PrimitiveTopology},
+    DefaultPlugins,
 };
+use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
+
+use marching_cubes::cpu::march;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(MaterialPlugin::<CustomMaterial>::default())
+        .add_plugin(NoCameraPlayerPlugin)
+        .insert_resource(MovementSettings {
+            sensitivity: 0.00015, // default: 0.00012
+            speed: 12.0,          // default: 12.0
+        })
         .add_startup_system(setup)
         .run();
 }
 
-// A "high" random id should be used for custom attributes to ensure consistent sorting and avoid collisions with other attributes.
-// See the MeshVertexAttribute docs for more info.
-const ATTRIBUTE_BLEND_COLOR: MeshVertexAttribute =
-    MeshVertexAttribute::new("BlendColor", 988540917, VertexFormat::Float32x4);
-
-// A "high" random id should be used for custom attributes to ensure consistent sorting and avoid collisions with other attributes.
-// See the MeshVertexAttribute docs for more info.
-const ATTRIBUTE_NEW_COLOR: MeshVertexAttribute =
-    MeshVertexAttribute::new("NewColor", 988541117, VertexFormat::Float32x4);
-
-/// set up a simple 3D scene
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<CustomMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mut mesh = Mesh::from(shape::Cube { size: 1.0 });
+    // commands.spawn(Mesh)
+
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(
-        ATTRIBUTE_BLEND_COLOR,
-        // The cube mesh has 24 vertices (6 faces, 4 vertices per face), so we insert one BlendColor for each
-        vec![[1.0, 0.0, 0.0, 1.0]; 24],
-    );
-    mesh.insert_attribute(
-        ATTRIBUTE_NEW_COLOR,
-        // The cube mesh has 24 vertices (6 faces, 4 vertices per face), so we insert one BlendColor for each
-        vec![[0.0, 1.0, 0.0, 1.0]; 24],
+        Mesh::ATTRIBUTE_POSITION,
+        vec![[0., 0., 0.], [1., 2., 1.], [2., 0., 0.]],
     );
 
-    // cube
-    commands.spawn(MaterialMeshBundle {
+    // In this example, normals and UVs don't matter,
+    // so we just use the same value for all of them
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0., 1., 0.]; 3]);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0., 0.]; 3]);
+
+    // A triangle using vertices 0, 2, and 1.
+    // Note: order matters. [0, 1, 2] will be flipped upside down, and you won't see it from behind!
+    mesh.set_indices(Some(mesh::Indices::U32(vec![0, 2, 1])));
+
+    commands.spawn(PbrBundle {
         mesh: meshes.add(mesh),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        material: materials.add(CustomMaterial {
-            color: Color::WHITE,
-        }),
+        material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
+        ..default()
+    });
+    commands.spawn(PointLightBundle {
+        point_light: PointLight {
+            intensity: 1500.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
 
-    // camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
-}
-
-// This is the struct that will be passed to your shader
-#[derive(AsBindGroup, Debug, Clone, TypeUuid)]
-#[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
-pub struct CustomMaterial {
-    #[uniform(0)]
-    color: Color,
-}
-
-impl Material for CustomMaterial {
-    fn vertex_shader() -> ShaderRef {
-        "shaders/custom_vertex_attribute.wgsl".into()
-    }
-    fn fragment_shader() -> ShaderRef {
-        "shaders/custom_vertex_attribute.wgsl".into()
-    }
-
-    fn specialize(
-        _pipeline: &MaterialPipeline<Self>,
-        descriptor: &mut RenderPipelineDescriptor,
-        layout: &MeshVertexBufferLayout,
-        _key: MaterialPipelineKey<Self>,
-    ) -> Result<(), SpecializedMeshPipelineError> {
-        let vertex_layout = layout.get_layout(&[
-            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-            ATTRIBUTE_BLEND_COLOR.at_shader_location(1),
-            ATTRIBUTE_NEW_COLOR.at_shader_location(2),
-        ])?;
-        descriptor.vertex.buffers = vec![vertex_layout];
-        Ok(())
-    }
+    commands
+        .spawn(Camera3dBundle {
+            transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..default()
+        })
+        .insert(FlyCam);
 }

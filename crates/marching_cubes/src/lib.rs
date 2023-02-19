@@ -1,6 +1,7 @@
 use bevy::{prelude::Plugin, render::RenderApp};
 
-pub mod lookup_tables;
+pub mod cpu;
+mod lookup_tables;
 
 pub struct MarchingCubesPlugin;
 
