@@ -13,7 +13,8 @@ edition = "2021"
 
 [dependencies]
 marching_cubes = { path = "./crates/marching_cubes" }
-bevy = { version = "0.9.1" }
+bevy = "0.9"
+bevy-inspector-egui = "0.17.0"
 bevy_flycam = { git = "https://github.com/sburris0/bevy_flycam" }
 
 # Enable a small amount of optimization in debug mode
