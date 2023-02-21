@@ -4,8 +4,10 @@ use bevy::{
     DefaultPlugins,
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
+use noise::{NoiseFn, Perlin};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use marching_cubes::cpu::marching_cubes;
 
 fn main() {
     App::new()
@@ -14,7 +16,7 @@ fn main() {
         .add_plugin(NoCameraPlayerPlugin)
         .insert_resource(MovementSettings {
             sensitivity: 0.00015, // default: 0.00012
-            speed: 12.0,          // default: 12.0
+            speed: 12.05          // default: 12.0
         })
         .add_startup_system(setup)
         .run();
@@ -25,6 +27,35 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    let perlin = Perlin::new(8008);
+    
+    let mut vertex_buffer: Vec<Vec3> = Vec::new();
+    let mut index_buffer: Vec<u32> = Vec::new();
+    
+    println!("noise: {}", perlin.get([20., 12.2, 5.3]));
+    marching_cubes(vec![1., 2.], 10, 0.5, &mut vertex_buffer, &mut index_buffer);
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        vertex_buffer,
+    );
+
+    mesh.set_indices(Some(mesh::Indices::U32(index_buffer)));
+    // mesh.duplicate_vertices();
+    // mesh.compute_flat_normals();
+
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(mesh),
+        material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
+        ..default()
+    });
+    
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(Mesh::from(shape::Plane { size: 10. })),
+        material: materials.add(Color::BLUE.into()),
+        ..default()
+    });
+    
     // commands.spawn(Mesh)
 
     // let foo = march();
@@ -41,7 +72,6 @@ fn setup(
 
     // A triangle using vertices 0, 2, and 1.
     // Note: order matters. [0, 1, 2] will be flipped upside down, and you won't see it from behind!
-    // mesh.set_indices(Some(mesh::Indices::U32(foo.indices)));
     // mesh.compute_flat_normals();
 
     // commands.spawn(PbrBundle {

@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.9"
-noisy_bevy = { version = "0.2.0" }
 ndcopy = "0.3.0"
